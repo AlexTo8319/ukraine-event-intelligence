@@ -3,13 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qjuaqnhwpwmywgshghpq.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqdWFxbmh3cHdteXdnc2hnaHBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDI5MjcsImV4cCI6MjA3OTgxODkyN30.vXQkZf4ERzyaqdCDouRtBUHXJY-6XSJaZrlK4WyRrik'
 
-console.log('[Supabase Init] URL:', supabaseUrl ? 'Set' : 'Missing')
-console.log('[Supabase Init] Key:', supabaseAnonKey ? 'Set (' + supabaseAnonKey.substring(0, 20) + '...)' : 'Missing')
-
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('[Supabase Init] ERROR: Missing Supabase environment variables')
-  console.error('[Supabase Init] URL:', supabaseUrl)
-  console.error('[Supabase Init] Key:', supabaseAnonKey ? 'Present' : 'Missing')
+  if (typeof window !== 'undefined') {
+    console.error('[Supabase Init] ERROR: Missing Supabase environment variables')
+  }
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -18,8 +15,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: false,
   },
 })
-
-console.log('[Supabase Init] Client created successfully')
 
 export interface Event {
   id: string

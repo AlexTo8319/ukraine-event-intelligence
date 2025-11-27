@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { supabase, Event } from '@/lib/supabase'
-import { format, parseISO } from 'date-fns'
+// Date formatting helper
+const formatDate = (dateString: string) => {
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  } catch {
+    return dateString
+  }
+}
 import './globals.css'
 
 export default function Home() {
@@ -84,7 +92,7 @@ export default function Home() {
   const stats = {
     total: events.length,
     upcoming: events.filter(e => {
-      const eventDate = parseISO(e.event_date)
+      const eventDate = new Date(e.event_date)
       return eventDate >= new Date()
     }).length,
     online: events.filter(e => e.is_online).length,
@@ -96,7 +104,7 @@ export default function Home() {
 
   const formatDate = (dateString: string) => {
     try {
-      return format(parseISO(dateString), 'MMM d, yyyy')
+      return formatDate(dateString)
     } catch {
       return dateString
     }
