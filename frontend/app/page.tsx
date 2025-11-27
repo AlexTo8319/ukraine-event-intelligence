@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase, Event } from '@/lib/supabase'
+import './globals.css'
+
 // Date formatting helper
 const formatDate = (dateString: string) => {
   try {
@@ -11,7 +13,6 @@ const formatDate = (dateString: string) => {
     return dateString
   }
 }
-import './globals.css'
 
 export default function Home() {
   const [events, setEvents] = useState<Event[]>([])
