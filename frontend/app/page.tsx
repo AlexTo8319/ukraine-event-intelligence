@@ -14,8 +14,10 @@ export default function Home() {
   const [debugInfo, setDebugInfo] = useState<string[]>([])
 
   const addDebug = (message: string) => {
-    console.log(`[DEBUG] ${message}`)
-    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`])
+    if (typeof window !== 'undefined') {
+      console.log(`[DEBUG] ${message}`)
+    }
+    setDebugInfo(prev => [...prev.slice(-4), `${new Date().toLocaleTimeString()}: ${message}`])
   }
 
   useEffect(() => {
