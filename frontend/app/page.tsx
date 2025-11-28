@@ -148,13 +148,41 @@ export default function Home() {
         throw new Error(data.error || data.message || 'Research trigger failed')
       }
       
-      setResearchStatus(data.message || 'Research agent triggered successfully!')
+      const message = data.message || 'Research agent triggered successfully!'
+      setResearchStatus(message)
       
-      // Wait a bit, then refresh events
-      setTimeout(() => {
-        loadEvents()
-        setResearchStatus(null)
-      }, 2000)
+      // If GitHub Actions was triggered, poll for new events
+      if (data.method === 'github-actions') {
+        // Keep status visible for longer
+        // Start polling for new events after 30 seconds
+        setTimeout(() => {
+          setResearchStatus('Research in progress... Checking for new events...')
+          
+          // Poll every 30 seconds for up to 5 minutes
+          let pollCount = 0
+          const maxPolls = 10 // 10 polls * 30 seconds = 5 minutes
+          
+          const pollInterval = setInterval(() => {
+            pollCount++
+            loadEvents()
+            
+            if (pollCount >= maxPolls) {
+              clearInterval(pollInterval)
+              setResearchStatus('Research completed! Check the events below.')
+              setTimeout(() => setResearchStatus(null), 10000)
+            } else {
+              setResearchStatus(`Research in progress... Checking for new events... (${pollCount}/${maxPolls})`)
+            }
+          }, 30000) // Poll every 30 seconds
+        }, 30000) // Wait 30 seconds before first poll
+      } else {
+        // Direct execution - refresh immediately
+        setTimeout(() => {
+          loadEvents()
+          setResearchStatus('Research completed! Events updated.')
+          setTimeout(() => setResearchStatus(null), 10000)
+        }, 2000)
+      }
       
     } catch (err: any) {
       const errorMsg = err.message || 'Failed to trigger research'
@@ -162,8 +190,10 @@ export default function Home() {
       console.error('Research trigger error:', err)
     } finally {
       setIsRunningResearch(false)
-      // Clear status message after 8 seconds (longer for errors)
-      setTimeout(() => setResearchStatus(null), 8000)
+      // Clear error status message after 15 seconds
+      if (researchStatus && researchStatus.startsWith('Error:')) {
+        setTimeout(() => setResearchStatus(null), 15000)
+      }
     }
   }
 
@@ -314,12 +344,23 @@ export default function Home() {
           <div style={{
             padding: '1rem',
             marginBottom: '1rem',
-            backgroundColor: researchStatus.startsWith('Error') ? '#fee' : '#efe',
-            border: `1px solid ${researchStatus.startsWith('Error') ? '#fcc' : '#cfc'}`,
+            backgroundColor: researchStatus.startsWith('Error') ? '#fee' : '#e3f2fd',
+            border: `1px solid ${researchStatus.startsWith('Error') ? '#fcc' : '#90caf9'}`,
             borderRadius: '6px',
-            color: researchStatus.startsWith('Error') ? '#c00' : '#060',
+            color: researchStatus.startsWith('Error') ? '#c00' : '#1565c0',
+            fontSize: '0.95rem',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
           }}>
-            {researchStatus}
+            {researchStatus.startsWith('Error') ? '❌' : '⏳'}
+            <span>{researchStatus}</span>
+            {!researchStatus.startsWith('Error') && (
+              <span style={{ fontSize: '0.85em', opacity: 0.8, marginLeft: 'auto' }}>
+                (This may take 2-3 minutes)
+              </span>
+            )}
           </div>
         )}
 
