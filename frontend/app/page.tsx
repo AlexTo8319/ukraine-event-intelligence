@@ -22,6 +22,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string[]>([])
+  const [isRunningResearch, setIsRunningResearch] = useState(false)
+  const [researchStatus, setResearchStatus] = useState<string | null>(null)
 
   // Today's date (November 28, 2025)
   const today = new Date('2025-11-28')
@@ -106,6 +108,43 @@ export default function Home() {
     }
   }
 
+  const triggerResearch = async () => {
+    try {
+      setIsRunningResearch(true)
+      setResearchStatus('Triggering research agent...')
+      
+      const response = await fetch('/api/trigger-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to trigger research')
+      }
+      
+      setResearchStatus(data.message || 'Research agent triggered successfully!')
+      
+      // Wait a bit, then refresh events
+      setTimeout(() => {
+        loadEvents()
+        setResearchStatus(null)
+      }, 2000)
+      
+    } catch (err: any) {
+      const errorMsg = err.message || 'Failed to trigger research'
+      setResearchStatus(`Error: ${errorMsg}`)
+      console.error('Research trigger error:', err)
+    } finally {
+      setIsRunningResearch(false)
+      // Clear status message after 5 seconds
+      setTimeout(() => setResearchStatus(null), 5000)
+    }
+  }
+
   const categories = ['Legislation', 'Housing', 'Recovery', 'General'] as const
   const stats = {
     total: events.length,
@@ -182,30 +221,85 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="filters">
-          <button
-            className={`filter-button ${selectedCategory === null ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(null)}
-          >
-            All Events
-          </button>
-          {categories.map(cat => (
+        <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="filters" style={{ flex: 1 }}>
             <button
-              key={cat}
-              className={`filter-button ${selectedCategory === cat ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(cat)}
+              className={`filter-button ${selectedCategory === null ? 'active' : ''}`}
+              onClick={() => setSelectedCategory(null)}
             >
-              {cat}
+              All Events
             </button>
-          ))}
+            {categories.map(cat => (
+              <button
+                key={cat}
+                className={`filter-button ${selectedCategory === cat ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+            <button
+              className={`filter-button ${showPastEvents ? 'active' : ''}`}
+              onClick={() => setShowPastEvents(!showPastEvents)}
+              style={{ marginLeft: '1rem' }}
+            >
+              {showPastEvents ? 'Hide Past Events' : 'Show Past Events'}
+            </button>
+          </div>
           <button
-            className={`filter-button ${showPastEvents ? 'active' : ''}`}
-            onClick={() => setShowPastEvents(!showPastEvents)}
-            style={{ marginLeft: '1rem' }}
+            onClick={triggerResearch}
+            disabled={isRunningResearch}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: isRunningResearch ? '#ccc' : '#0066cc',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: isRunningResearch ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!isRunningResearch) {
+                e.currentTarget.style.backgroundColor = '#0052a3'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isRunningResearch) {
+                e.currentTarget.style.backgroundColor = '#0066cc'
+              }
+            }}
           >
-            {showPastEvents ? 'Hide Past Events' : 'Show Past Events'}
+            {isRunningResearch ? (
+              <>
+                <span>⏳</span>
+                <span>Running Research...</span>
+              </>
+            ) : (
+              <>
+                <span>🔍</span>
+                <span>Run Research Now</span>
+              </>
+            )}
           </button>
         </div>
+        
+        {researchStatus && (
+          <div style={{
+            padding: '1rem',
+            marginBottom: '1rem',
+            backgroundColor: researchStatus.startsWith('Error') ? '#fee' : '#efe',
+            border: `1px solid ${researchStatus.startsWith('Error') ? '#fcc' : '#cfc'}`,
+            borderRadius: '6px',
+            color: researchStatus.startsWith('Error') ? '#c00' : '#060',
+          }}>
+            {researchStatus}
+          </div>
+        )}
 
         {loading ? (
           <div className="loading">Loading events...</div>
