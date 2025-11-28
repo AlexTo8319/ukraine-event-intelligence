@@ -120,10 +120,32 @@ export default function Home() {
         },
       })
       
-      const data = await response.json()
-      
+      // Check if response is ok and has content
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to trigger research')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = { error: `HTTP ${response.status}: ${response.statusText}` }
+        }
+        throw new Error(errorData.error || errorData.message || 'Failed to trigger research')
+      }
+      
+      // Parse JSON response
+      let data
+      try {
+        const text = await response.text()
+        if (!text) {
+          throw new Error('Empty response from server')
+        }
+        data = JSON.parse(text)
+      } catch (parseError: any) {
+        console.error('JSON parse error:', parseError)
+        throw new Error('Invalid response from server. Please check the console for details.')
+      }
+      
+      if (data.success === false) {
+        throw new Error(data.error || data.message || 'Research trigger failed')
       }
       
       setResearchStatus(data.message || 'Research agent triggered successfully!')
@@ -140,8 +162,8 @@ export default function Home() {
       console.error('Research trigger error:', err)
     } finally {
       setIsRunningResearch(false)
-      // Clear status message after 5 seconds
-      setTimeout(() => setResearchStatus(null), 5000)
+      // Clear status message after 8 seconds (longer for errors)
+      setTimeout(() => setResearchStatus(null), 8000)
     }
   }
 
