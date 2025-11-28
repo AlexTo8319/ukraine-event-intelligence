@@ -20,10 +20,13 @@ export interface Event {
   id: string
   event_title: string
   event_date: string
+  event_time: string | null
   organizer: string | null
   url: string
+  registration_url: string | null
   category: 'Legislation' | 'Housing' | 'Recovery' | 'General'
   is_online: boolean
+  target_audience: string | null
   summary: string | null
   created_at: string
   updated_at: string

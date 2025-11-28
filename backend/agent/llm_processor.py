@@ -87,11 +87,14 @@ Your task is to:
 3. Extract structured data for each valid event:
    - event_title: Clear, descriptive title
    - event_date: Date in YYYY-MM-DD format (must be between today and 4 weeks from now)
+   - event_time: Time in HH:MM format (24-hour, e.g., "14:30" or "09:00"). Use null if time is not available
    - organizer: Name of organizing entity
-   - url: The source URL
+   - url: The source URL where event information was found
+   - registration_url: Direct link to event registration page (if available, otherwise use the source URL)
    - category: One of: "Legislation", "Housing", "Recovery", "General"
    - is_online: Boolean indicating if event is online/virtual
-   - summary: Short English summary (1-2 sentences) explaining why this event matters for donors, government officials, or architects
+   - target_audience: Comma-separated list of target audiences (e.g., "Donors, Government Officials, Architects" or "Architects, Urban Planners")
+   - summary: 1-2 sentence description of the event in English
 
 Return ONLY a valid JSON array of event objects. If no valid events are found, return an empty array [].
 
@@ -100,10 +103,13 @@ Example format:
   {
     "event_title": "International Conference on Post-War Urban Recovery in Ukraine",
     "event_date": "2024-12-15",
+    "event_time": "09:00",
     "organizer": "Ministry of Communities and Territories Development",
-    "url": "https://example.com/event",
+    "url": "https://example.com/event-info",
+    "registration_url": "https://example.com/register",
     "category": "Recovery",
     "is_online": false,
+    "target_audience": "Donors, Government Officials, Architects",
     "summary": "This conference brings together international experts to discuss sustainable reconstruction strategies for Ukrainian cities."
   }
 ]"""
@@ -155,6 +161,8 @@ Extract all valid professional events and return as JSON array."""
     def _parse_event(self, data: Dict) -> Optional[Event]:
         """Parse a dictionary into an Event object."""
         try:
+            from datetime import time as dt_time
+            
             # Normalize category
             category_str = data.get("category", "General")
             try:
@@ -169,13 +177,36 @@ Extract all valid professional events and return as JSON array."""
             else:
                 return None
             
+            # Parse time
+            event_time = None
+            time_str = data.get("event_time")
+            if time_str:
+                if isinstance(time_str, str):
+                    try:
+                        # Handle HH:MM format
+                        parts = time_str.split(":")
+                        if len(parts) >= 2:
+                            hour = int(parts[0])
+                            minute = int(parts[1])
+                            event_time = dt_time(hour, minute)
+                    except (ValueError, IndexError):
+                        pass
+            
+            # Get registration URL, fallback to source URL if not provided
+            registration_url = data.get("registration_url", "").strip() or None
+            if not registration_url:
+                registration_url = data.get("url", "").strip() or None
+            
             return Event(
                 event_title=data.get("event_title", "").strip(),
                 event_date=event_date,
+                event_time=event_time,
                 organizer=data.get("organizer", "").strip() or None,
                 url=data.get("url", "").strip(),
+                registration_url=registration_url,
                 category=category,
                 is_online=bool(data.get("is_online", False)),
+                target_audience=data.get("target_audience", "").strip() or None,
                 summary=data.get("summary", "").strip() or None
             )
         except Exception as e:
