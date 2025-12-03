@@ -24,27 +24,30 @@ SEMANTIC_EQUIVALENTS = {
 class DuplicateDetector:
     """Detects duplicate events using fuzzy matching on title and date."""
     
-    def __init__(self, title_similarity_threshold: float = 0.85, date_tolerance_days: int = 0):
+    def __init__(self, title_similarity_threshold: float = 0.60, date_tolerance_days: int = 0):
         """
         Initialize duplicate detector.
         
         Args:
-            title_similarity_threshold: Minimum similarity ratio (0-1) to consider titles similar
+            title_similarity_threshold: Minimum similarity ratio (0-1) to consider titles similar (default: 0.60 for aggressive duplicate detection)
             date_tolerance_days: Maximum days difference to consider same event (default: 0 = exact match)
         """
         self.title_similarity_threshold = title_similarity_threshold
         self.date_tolerance_days = date_tolerance_days
     
     def normalize_title(self, title: str) -> str:
-        """Normalize title for comparison (lowercase, remove extra spaces, remove special chars)."""
+        """Normalize title for comparison (lowercase, remove extra spaces, normalize spelling)."""
         if not title:
             return ""
         # Convert to lowercase
         title = title.lower()
+        # Normalize common spelling variations
+        title = title.replace('kreator', 'creator')  # Ukrainian transliteration
+        title = title.replace('-bud', ' bud')  # Normalize separators
         # Remove extra whitespace
         title = " ".join(title.split())
         # Remove common words that don't affect uniqueness
-        stop_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"}
+        stop_words = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "year"}
         words = [w for w in title.split() if w not in stop_words]
         return " ".join(words)
     

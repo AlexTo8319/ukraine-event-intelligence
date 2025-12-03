@@ -637,6 +637,8 @@ Extract all valid professional events (not news articles) and return as JSON arr
             'thepeninsulaqatar.com',
             'zygonjournal.org',
             'hmarochos.kiev.ua',  # News blog site
+            'misto.media',  # News site
+            'archi.ru',  # Architecture news, not events
         ]
         if any(agg in url_lower for agg in news_aggregators):
             print(f"  ⚠️  Rejecting news aggregator URL: {event.url[:60]}")
@@ -654,6 +656,10 @@ Extract all valid professional events (not news articles) and return as JSON arr
             'conferenceseries.com',
             '10times.com',
             'eventbrite.com/d/',  # Search pages, not specific events
+            'competitioncorner.net',  # Event listing aggregator
+            'wordreference.com',  # Dictionary site, not events
+            'addtoany.com',  # Share button links
+            'espconferences.org',  # Spam conference site
         ]
         if any(agg in url_lower for agg in spam_aggregators):
             print(f"  ⚠️  Rejecting spam conference aggregator: {event.url[:60]}")
@@ -680,6 +686,9 @@ Extract all valid professional events (not news articles) and return as JSON arr
             '/upcoming-events',
             '/event-list',
             '/events/',  # If it ends with events/
+            '/newsroom/',  # News sections
+            '/past-events',  # Past event listings
+            '/archive/',  # Archive pages
         ]
         for pattern in listing_patterns:
             if pattern in url_lower:

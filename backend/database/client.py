@@ -55,6 +55,64 @@ def _translate_text(text: str, context: str = "text") -> str:
         return text
 
 
+import re
+
+# Spam/invalid URL patterns
+_SPAM_SITES = [
+    'conferencealerts', 'allconferencealert', 'internationalconferencealerts',
+    'waset.org', '10times.com', 'conferenceineurope', 'conferenceseries',
+    'competitioncorner.net', 'wordreference.com', 'addtoany.com', 'espconferences.org'
+]
+
+_NEWS_SITES = [
+    'kyivindependent.com', 'pravda.com.ua', 'ukrinform.ua', 'unian.ua',
+    'korrespondent.net', 'thepeninsulaqatar.com', 'zygonjournal.org',
+    'hmarochos.kiev.ua', 'misto.media', 'archi.ru'
+]
+
+_LISTING_PATTERNS = [
+    '/all-events', '/category/', '/news/', '/events/', '/newsroom/',
+    '/past-events', '/archive/', '/event-list', '/upcoming-events'
+]
+
+def _is_valid_url(url: str) -> tuple:
+    """
+    Check if URL is valid for an event page.
+    Returns (is_valid, reason)
+    """
+    if not url:
+        return False, "No URL provided"
+    
+    url_lower = url.lower()
+    
+    # Check spam sites
+    for spam in _SPAM_SITES:
+        if spam in url_lower:
+            return False, f"Spam site: {spam}"
+    
+    # Check news sites
+    for news in _NEWS_SITES:
+        if news in url_lower:
+            return False, f"News site: {news}"
+    
+    # Check for date pattern in URL (news articles)
+    if re.search(r'/\d{4}/\d{2}/\d{2}/', url):
+        # Whitelist legitimate event domains
+        whitelist = ['facebook.com', 'instagram.com', 'gov.ua', 'irf.ua', 'rada.gov.ua']
+        if not any(w in url_lower for w in whitelist):
+            return False, "News article URL (date pattern)"
+    
+    # Check listing patterns
+    for pattern in _LISTING_PATTERNS:
+        if pattern in url_lower:
+            # Allow if has event ID
+            if 'eventdetail' in url_lower or 'eventid' in url_lower:
+                continue
+            return False, f"Listing page: {pattern}"
+    
+    return True, "OK"
+
+
 class DatabaseClient:
     """Client for interacting with Supabase database."""
     
@@ -87,14 +145,21 @@ class DatabaseClient:
     def upsert_event(self, event_data: dict) -> dict:
         """
         Insert or update an event based on URL (unique identifier).
-        ALWAYS translates Ukrainian content before saving.
+        ALWAYS validates URL and translates Ukrainian content before saving.
         
         Args:
             event_data: Dictionary containing event fields
             
         Returns:
-            The inserted/updated event record
+            The inserted/updated event record, or None if URL is invalid
         """
+        # MANDATORY: Validate URL before saving
+        url = event_data.get('url', '')
+        is_valid, reason = _is_valid_url(url)
+        if not is_valid:
+            print(f"  ❌ DB Rejected invalid URL: {reason} - {url[:50]}...")
+            return None
+        
         # MANDATORY: Translate before saving
         event_data = self._force_translate(event_data)
         

@@ -28,27 +28,30 @@ HEADERS = {
 # Spam sites blocklist
 SPAM_SITES = [
     'conferencealerts', 'allconferencealert', 'internationalconferencealerts',
-    'conferenceineurope', 'waset.org', '10times.com', 'eventbrite.com/d/'
+    'conferenceineurope', 'waset.org', '10times.com', 'eventbrite.com/d/',
+    'competitioncorner.net', 'wordreference.com', 'addtoany.com', 'espconferences.org',
+    'conferenceseries.com'
 ]
 
 # News sites blocklist (not event pages)
 NEWS_SITES = [
     'kyivindependent.com', 'pravda.com.ua', 'ukrinform.ua', 'unian.ua',
     'korrespondent.net', 'thepeninsulaqatar.com', 'zygonjournal.org',
-    'hmarochos.kiev.ua'
+    'hmarochos.kiev.ua', 'misto.media', 'archi.ru'
 ]
 
 # Listing page patterns
 LISTING_PATTERNS = [
     '/all-events', '/category/', '/news/', '/events/', '/upcoming-events',
-    'naukovi-konferenciyi', '/event-list', '/article/', '/articles/', '/blog/'
+    'naukovi-konferenciyi', '/event-list', '/article/', '/articles/', '/blog/',
+    '/newsroom/', '/past-events', '/archive/'
 ]
 
 # Legitimate event URL domains (whitelist)
 LEGITIMATE_EVENT_URLS = [
     'facebook.com', 'instagram.com/p/', 'jotform.com', 'rada.gov.ua',
-    'irf.ua', 'cfr.org/event', 'fes.de', 'citiesalliance.org',
-    'dilovamova.com', 'gov.ua', 'dpu.edu.ua'
+    'irf.ua', 'cfr.org/event', 'fes.de', 'gov.ua', 'dpu.edu.ua',
+    'dilovamova.com', 'ubc.net', 'usubc.org', 'msb.se'
 ]
 
 # Semantic duplicate mappings (Ukrainian -> English)
