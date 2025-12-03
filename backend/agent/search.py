@@ -63,8 +63,24 @@ class SearchAgent:
             "European Commission Ukraine recovery event"
         ]
         
+        # Group F: Energy and sustainability events
+        energy_keywords = [
+            "energy week Ukraine 2025",
+            "тиждень енергоефективності Україна 2025",
+            "sustainable energy Ukraine conference",
+            "green reconstruction Ukraine forum",
+            "энергетический форум Украина 2025"
+        ]
+        
+        # Group G: Infrastructure and construction
+        infrastructure_keywords = [
+            "infrastructure Ukraine conference 2025",
+            "construction forum Ukraine грудень",
+            "budivelnyk Ukraine congress"
+        ]
+        
         # Combine all keywords
-        all_keywords = planning_keywords + recovery_keywords + housing_keywords + governance_keywords + org_keywords
+        all_keywords = planning_keywords + recovery_keywords + housing_keywords + governance_keywords + org_keywords + energy_keywords + infrastructure_keywords
         
         return all_keywords
     
