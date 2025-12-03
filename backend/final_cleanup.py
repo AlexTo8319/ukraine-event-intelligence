@@ -4,6 +4,7 @@ Ensures all events are translated and no duplicates remain.
 """
 import os
 import sys
+import re
 import requests
 from datetime import date
 
