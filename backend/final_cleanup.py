@@ -67,6 +67,24 @@ SEMANTIC_MAPPINGS = {
     'тиждень': ['week'],
 }
 
+# Allowed cities for local events (UN-Habitat recovery focus)
+ALLOWED_CITIES = [
+    'stryi', 'стрий', 'makariv', 'макарів', 'borodianka', 'бородянка',
+    'drohobych', 'дрогобич', 'irpin', 'ірпінь', 'truskavets', 'трускавець',
+    'opishnia', 'опішня', 'myrhorod', 'миргород',
+    'kyiv', 'київ', 'lviv', 'львів', 'kharkiv', 'харків', 'odesa', 'одеса', 'dnipro', 'дніпро'
+]
+
+# Local cities to exclude
+LOCAL_CITIES_TO_EXCLUDE = [
+    'khmelnytskyi', 'хмельниц', 'sumy', 'сум', 'chernihiv', 'черніг',
+    'zhytomyr', 'житомир', 'rivne', 'рівн', 'lutsk', 'луцьк',
+    'ternopil', 'терноп', 'ivano-frankivsk', 'івано-франків', 'uzhhorod', 'ужгород',
+    'chernivtsi', 'чернівц', 'vinnytsia', 'вінниц', 'poltava', 'полтав',
+    'kherson', 'херсон', 'zaporizhzhia', 'запоріж', 'mykolaiv', 'миколаїв',
+    'kropyvnytskyi', 'кропивниц'
+]
+
 UKR_CHARS = 'абвгґдеєжзиіїйклмнопрстуфхцчшщьюя'
 
 
@@ -131,6 +149,25 @@ def is_listing_page(url: str) -> bool:
     return False
 
 
+def is_local_event(title: str, organizer: str) -> bool:
+    """Check if event is a local event from excluded cities."""
+    combined = f"{title} {organizer or ''}".lower()
+    
+    # Check if from excluded local city
+    is_local = any(city in combined for city in LOCAL_CITIES_TO_EXCLUDE)
+    
+    # Check if from allowed city
+    is_allowed = any(city in combined for city in ALLOWED_CITIES)
+    
+    # Check if national/international (always allowed)
+    national_indicators = ['national', 'international', 'all-ukrainian', 'всеукраїн', 
+                           'ukraine', 'україн', 'european', 'європ']
+    is_national = any(ind in combined for ind in national_indicators)
+    
+    # Reject if local and not allowed and not national
+    return is_local and not is_allowed and not is_national
+
+
 def is_semantic_duplicate(title1: str, title2: str, date1: str, date2: str) -> bool:
     """Check if two events are semantic duplicates (same event in different languages)."""
     # Must be same date
@@ -178,8 +215,8 @@ def main():
     events = response.json()
     print(f"Total events: {len(events)}")
     
-    # STEP 1: Remove spam URLs, news articles, and listing pages
-    print("\nStep 1: Removing spam/news/listing URLs...")
+    # STEP 1: Remove spam URLs, news articles, listing pages, and local events
+    print("\nStep 1: Removing spam/news/listing/local URLs...")
     removed = 0
     for e in events[:]:  # Copy list for safe removal
         url = e['url']
@@ -191,13 +228,15 @@ def main():
             reason = "news article"
         elif is_listing_page(url):
             reason = "listing page"
+        elif is_local_event(e['event_title'], e.get('organizer', '')):
+            reason = "local event (not from allowed cities)"
         
         if reason:
             print(f"  🗑️ Removing ({reason}): {e['event_title'][:40]}...")
             requests.delete(f"{SUPABASE_URL}/rest/v1/events?id=eq.{e['id']}", headers=HEADERS)
             events.remove(e)
             removed += 1
-    print(f"  Removed {removed} spam/news/listing events")
+    print(f"  Removed {removed} problematic events")
     
     # STEP 2: Translate all Ukrainian content
     print("\nStep 2: Translating Ukrainian content...")

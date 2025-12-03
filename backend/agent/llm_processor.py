@@ -319,6 +319,8 @@ IMPORTANT SCOPE FILTERING:
 - INCLUDE national and international events
 - INCLUDE major regional conferences/forums (but not routine administrative meetings)
 - EXCLUDE routine administrative meetings (рада, засідання ради, etc. unless it's a major forum)
+- EXCLUDE local events EXCEPT from these specific cities (allowed): Stryi/Стрий, Makariv/Макарів, Borodianka/Бородянка, Drohobych/Дрогобич, Irpin/Ірпінь, Truskavets/Трускавець, Opishnia/Опішня, Myrhorod/Миргород
+- EXCLUDE events from other local cities like Khmelnytskyi, Sumy, Chernihiv, Zhytomyr, Rivne, Lutsk, Ternopil, Ivano-Frankivsk, Uzhhorod, Chernivtsi, Vinnytsia, Poltava, Kherson, Zaporizhzhia, Mykolaiv, Kropyvnytskyi, etc. (unless they are NATIONAL/INTERNATIONAL events)
 
 2. STRICTLY FILTER OUT (DO NOT EXTRACT):
    - News articles or news stories (even if about events)
@@ -609,6 +611,41 @@ Extract all valid professional events (not news articles) and return as JSON arr
         ]
         if event.event_title.lower().strip() in fabricated_titles:
             print(f"  ⚠️  Rejecting likely fabricated title: {event.event_title[:50]}")
+            return False
+        
+        # STRICT: Reject local events except from allowed cities
+        # Allowed cities (UN-Habitat recovery focus areas)
+        allowed_cities = [
+            'stryi', 'стрий', 'makariv', 'макарів', 'borodianka', 'бородянка',
+            'drohobych', 'дрогобич', 'irpin', 'ірпінь', 'truskavets', 'трускавець',
+            'opishnia', 'опішня', 'опішне', 'myrhorod', 'миргород',
+            # Also allow major cities (national importance)
+            'kyiv', 'київ', 'lviv', 'львів', 'kharkiv', 'харків', 'odesa', 'одеса',
+            'dnipro', 'дніпро'
+        ]
+        # Local cities to exclude (if event is specifically FROM these cities)
+        local_cities_to_exclude = [
+            'khmelnytskyi', 'хмельниц', 'sumy', 'сум', 'chernihiv', 'черніг',
+            'zhytomyr', 'житомир', 'rivne', 'рівн', 'lutsk', 'луцьк',
+            'ternopil', 'терноп', 'ivano-frankivsk', 'івано-франків', 'uzhhorod', 'ужгород',
+            'chernivtsi', 'чернівц', 'vinnytsia', 'вінниц', 'poltava', 'полтав',
+            'kherson', 'херсон', 'zaporizhzhia', 'запоріж', 'mykolaiv', 'миколаїв',
+            'kropyvnytskyi', 'кропивниц'
+        ]
+        
+        combined_text = f"{event.event_title} {event.organizer or ''}".lower()
+        
+        # Check if event is from an excluded local city
+        is_local = any(city in combined_text for city in local_cities_to_exclude)
+        is_allowed = any(city in combined_text for city in allowed_cities)
+        
+        # Check if it's a national/international event (these are always allowed)
+        national_indicators = ['national', 'international', 'all-ukrainian', 'всеукраїн', 
+                               'ukraine', 'україн', 'european', 'європ']
+        is_national = any(ind in combined_text for ind in national_indicators)
+        
+        if is_local and not is_allowed and not is_national:
+            print(f"  ⚠️  Rejecting local event (not from allowed cities): {event.event_title[:50]}")
             return False
         
         # Check title doesn't look like news/article/program

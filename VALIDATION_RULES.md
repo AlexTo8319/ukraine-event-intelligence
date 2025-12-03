@@ -35,6 +35,12 @@ This document contains ALL validation rules currently active in the system. You 
 - ✅ INCLUDE: Major regional conferences/forums
 - ✅ INCLUDE: Specific events by NGOs and INGOs related to Urban Recovery, Public Space Design, Inclusive Design, etc.
 
+**LOCAL CITIES FILTER:**
+- ✅ ALLOWED cities (UN-Habitat recovery focus areas): Stryi/Стрий, Makariv/Макарів, Borodianka/Бородянка, Drohobych/Дрогобич, Irpin/Ірпінь, Truskavets/Трускавець, Opishnia/Опішня, Myrhorod/Миргород
+- ✅ ALWAYS ALLOWED (major cities): Kyiv, Lviv, Kharkiv, Odesa, Dnipro
+- ❌ EXCLUDE local events from other cities: Khmelnytskyi, Sumy, Chernihiv, Zhytomyr, Rivne, Lutsk, Ternopil, Ivano-Frankivsk, Uzhhorod, Chernivtsi, Vinnytsia, Poltava, Kherson, Zaporizhzhia, Mykolaiv, Kropyvnytskyi
+- ⚠️ Exception: National/international events from any city are ALWAYS allowed
+
 **DATE EXTRACTION:**
 - Extract EVENT DATE, not article publication date
 - Look for dates after "Дата та час:", "Date:", "Event date:", "When:"
