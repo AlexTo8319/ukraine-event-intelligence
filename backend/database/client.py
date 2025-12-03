@@ -75,6 +75,42 @@ _LISTING_PATTERNS = [
     '/past-events', '/archive/', '/event-list', '/upcoming-events'
 ]
 
+# Allowed cities for local events (UN-Habitat recovery focus)
+_ALLOWED_CITIES = [
+    'stryi', 'стрий', 'makariv', 'макарів', 'borodianka', 'бородянка',
+    'drohobych', 'дрогобич', 'irpin', 'ірпінь', 'truskavets', 'трускавець',
+    'opishnia', 'опішня', 'myrhorod', 'миргород',
+    'kyiv', 'київ', 'lviv', 'львів', 'kharkiv', 'харків', 'odesa', 'одеса', 'dnipro', 'дніпро'
+]
+
+# Local cities to exclude (unless national/international event)
+_LOCAL_CITIES_TO_EXCLUDE = [
+    'khmelnytskyi', 'хмельниц', 'sumy', 'сум', 'chernihiv', 'черніг',
+    'zhytomyr', 'житомир', 'rivne', 'рівн', 'lutsk', 'луцьк',
+    'ternopil', 'терноп', 'ivano-frankivsk', 'івано-франків', 'uzhhorod', 'ужгород',
+    'chernivtsi', 'чернівц', 'vinnytsia', 'вінниц', 'poltava', 'полтав',
+    'kherson', 'херсон', 'zaporizhzhia', 'запоріж', 'mykolaiv', 'миколаїв',
+    'kropyvnytskyi', 'кропивниц'
+]
+
+def _is_local_event(title: str, organizer: str) -> bool:
+    """Check if event is a local event from excluded cities."""
+    combined = f"{title} {organizer or ''}".lower()
+    
+    # Check if from excluded local city
+    is_local = any(city in combined for city in _LOCAL_CITIES_TO_EXCLUDE)
+    
+    # Check if from allowed city
+    is_allowed = any(city in combined for city in _ALLOWED_CITIES)
+    
+    # Check if national/international (always allowed)
+    national_indicators = ['national', 'international', 'all-ukrainian', 'всеукраїн', 
+                           'ukraine', 'україн', 'european', 'європ']
+    is_national = any(ind in combined for ind in national_indicators)
+    
+    # Reject if local and not allowed and not national
+    return is_local and not is_allowed and not is_national
+
 def _is_valid_url(url: str) -> tuple:
     """
     Check if URL is valid for an event page.
@@ -158,6 +194,13 @@ class DatabaseClient:
         is_valid, reason = _is_valid_url(url)
         if not is_valid:
             print(f"  ❌ DB Rejected invalid URL: {reason} - {url[:50]}...")
+            return None
+        
+        # MANDATORY: Check for local events from excluded cities
+        title = event_data.get('event_title', '')
+        organizer = event_data.get('organizer', '')
+        if _is_local_event(title, organizer):
+            print(f"  ❌ DB Rejected local event: {title[:40]}...")
             return None
         
         # MANDATORY: Translate before saving
