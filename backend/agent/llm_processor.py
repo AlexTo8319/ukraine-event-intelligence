@@ -344,7 +344,11 @@ IMPORTANT SCOPE FILTERING:
    - For date ranges (e.g., "December 1-5" or "01-05 ГРУДНЯ"), use the START DATE (first date), not the end date
 
 4. Extract structured data for each valid event:
-   - event_title: Clear, descriptive title IN ENGLISH (translate from Ukrainian if needed)
+   - event_title: MUST be the ACTUAL title from the page content. DO NOT invent or rename events!
+     * Use the EXACT event name from the page (translate to English if Ukrainian)
+     * If page says "Strategic Vision for Defense Technology" - use THAT title
+     * DO NOT rename events to something generic like "Ukraine Recovery Conference"
+     * The title MUST appear in the page content
    - event_date: Date in YYYY-MM-DD format (must be between today and 6 months from now). CRITICAL: 
      * **EXTRACT THE EVENT DATE, NOT THE ARTICLE PUBLICATION DATE**
      * Look for dates after "Дата та час:", "Date:", "Event date:", "When:" markers
@@ -593,6 +597,18 @@ Extract all valid professional events (not news articles) and return as JSON arr
         
         # Check required fields
         if not event.event_title or len(event.event_title) < 5:
+            return False
+        
+        # STRICT: Reject generic/fabricated titles that don't match URL
+        # These titles are often invented by LLM and don't match actual page content
+        fabricated_titles = [
+            "ukraine recovery conference 2025",  # Real URC was in June 2025 (past)
+            "ukraine recovery conference 2024",
+            "ukraine reconstruction conference",
+            "international ukraine conference",
+        ]
+        if event.event_title.lower().strip() in fabricated_titles:
+            print(f"  ⚠️  Rejecting likely fabricated title: {event.event_title[:50]}")
             return False
         
         # Check title doesn't look like news/article/program
