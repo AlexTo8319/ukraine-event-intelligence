@@ -6,6 +6,54 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Ukrainian/Cyrillic characters for detection (includes all Cyrillic that might appear)
+_UKR_CHARS = 'абвгґдеєжзиіїйклмнопрстуфхцчшщьюяАБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ'
+# Also check for Cyrillic letters that look like Latin (а, е, і, о, р, с, у, х)
+_CYRILLIC_LOOKALIKES = 'аеіорсухАЕІОРСУХ'
+
+def _is_ukrainian(text: str) -> bool:
+    """Check if text contains Ukrainian/Cyrillic characters."""
+    if not text:
+        return False
+    # Check for obvious Ukrainian
+    if any(c in text for c in _UKR_CHARS):
+        return True
+    # Check for Cyrillic lookalikes by comparing char codes
+    for c in text:
+        # Cyrillic range: 0x0400-0x04FF
+        if 0x0400 <= ord(c) <= 0x04FF:
+            return True
+    return False
+
+def _translate_text(text: str, context: str = "text") -> str:
+    """Translate Ukrainian text to English using OpenAI."""
+    if not text or not _is_ukrainian(text):
+        return text
+    
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print(f"  ⚠️ OPENAI_API_KEY not set - cannot translate: {text[:30]}...")
+        return text
+    
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": f"Translate this {context} from Ukrainian to English. Return ONLY the translation, no quotes or explanations."},
+                {"role": "user", "content": text}
+            ],
+            max_tokens=300,
+            temperature=0.3
+        )
+        result = resp.choices[0].message.content.strip().strip('"\'')
+        print(f"  🔄 DB Translated: {text[:25]}... → {result[:25]}...")
+        return result
+    except Exception as e:
+        print(f"  ⚠️ Translation error: {str(e)[:50]}")
+        return text
+
 
 class DatabaseClient:
     """Client for interacting with Supabase database."""
@@ -20,9 +68,26 @@ class DatabaseClient:
         self.client: Client = create_client(supabase_url, supabase_key)
         self.table_name = "events"
     
+    def _force_translate(self, event_data: dict) -> dict:
+        """MANDATORY translation of all Ukrainian text before saving."""
+        # Translate title
+        if _is_ukrainian(event_data.get('event_title', '')):
+            event_data['event_title'] = _translate_text(event_data['event_title'], "event title")
+        
+        # Translate organizer
+        if _is_ukrainian(event_data.get('organizer', '')):
+            event_data['organizer'] = _translate_text(event_data['organizer'], "organization name")
+        
+        # Translate summary
+        if _is_ukrainian(event_data.get('summary', '')):
+            event_data['summary'] = _translate_text(event_data['summary'], "event description")
+        
+        return event_data
+    
     def upsert_event(self, event_data: dict) -> dict:
         """
         Insert or update an event based on URL (unique identifier).
+        ALWAYS translates Ukrainian content before saving.
         
         Args:
             event_data: Dictionary containing event fields
@@ -30,6 +95,9 @@ class DatabaseClient:
         Returns:
             The inserted/updated event record
         """
+        # MANDATORY: Translate before saving
+        event_data = self._force_translate(event_data)
+        
         # Check if event with this URL already exists
         existing = self.client.table(self.table_name)\
             .select("id, url")\
@@ -73,13 +141,31 @@ class DatabaseClient:
         result = query.execute()
         return result.data if result.data else []
     
-    def get_upcoming_events(self, days: int = 28) -> List[dict]:
+    def get_all_events(self, limit: int = 2000) -> List[dict]:
+        """
+        Retrieve all events from database (including past events).
+        
+        Args:
+            limit: Maximum number of events to return
+            
+        Returns:
+            List of all event records
+        """
+        query = self.client.table(self.table_name)\
+            .select("*")\
+            .order("event_date", desc=False)\
+            .limit(limit)
+        
+        result = query.execute()
+        return result.data if result.data else []
+    
+    def get_upcoming_events(self, days: int = 180) -> List[dict]:  # Default: 6 months
         """
         Get events in the next N days.
         
         Args:
             days: Number of days to look ahead
-            
+        
         Returns:
             List of upcoming event records
         """
@@ -95,4 +181,78 @@ class DatabaseClient:
             .execute()
         
         return result.data if result.data else []
+    
+    def get_all_events_for_duplicate_check(self, limit: int = 500) -> List[dict]:
+        """
+        Get all events for duplicate checking (includes past events for comparison).
+        
+        Args:
+            limit: Maximum number of events to return
+        
+        Returns:
+            List of event records with title and date
+        """
+        result = self.client.table(self.table_name)\
+            .select("event_title, event_date")\
+            .order("event_date", desc=False)\
+            .limit(limit)\
+            .execute()
+        
+        return result.data if result.data else []
+    
+    def delete_event(self, event_id: int) -> bool:
+        """
+        Delete an event by its ID.
+        
+        Args:
+            event_id: The ID of the event to delete
+            
+        Returns:
+            True if deleted, False otherwise
+        """
+        try:
+            self.client.table(self.table_name)\
+                .delete()\
+                .eq("id", event_id)\
+                .execute()
+            return True
+        except Exception as e:
+            print(f"Error deleting event: {e}")
+            return False
+    
+    def delete_event_by_url(self, url: str) -> bool:
+        """
+        Delete an event by its URL.
+        
+        Args:
+            url: The URL of the event to delete
+            
+        Returns:
+            True if deleted, False otherwise
+        """
+        try:
+            result = self.client.table(self.table_name)\
+                .delete()\
+                .eq("url", url)\
+                .execute()
+            return True
+        except Exception as e:
+            print(f"Error deleting event: {e}")
+            return False
+    
+    def delete_events_by_urls(self, urls: List[str]) -> int:
+        """
+        Delete multiple events by their URLs.
+        
+        Args:
+            urls: List of URLs to delete
+            
+        Returns:
+            Number of events deleted
+        """
+        deleted = 0
+        for url in urls:
+            if self.delete_event_by_url(url):
+                deleted += 1
+        return deleted
 
