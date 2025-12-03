@@ -70,3 +70,6 @@ echo "🎉 Your site will be live in 2-3 minutes!"
 echo "   URL: https://your-project.vercel.app"
 
 
+
+
+

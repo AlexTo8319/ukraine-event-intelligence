@@ -24,10 +24,7 @@ export default function Home() {
   const [debugInfo, setDebugInfo] = useState<string[]>([])
   const [isRunningResearch, setIsRunningResearch] = useState(false)
   const [researchStatus, setResearchStatus] = useState<string | null>(null)
-
-  // Today's date (November 28, 2025)
-  const today = new Date('2025-11-28')
-  today.setHours(0, 0, 0, 0)
+  const [apiCredits, setApiCredits] = useState<{tavily: {used: number, remaining: number} | null, openai: {used: number} | null}>({tavily: null, openai: null})
 
   const addDebug = (message: string) => {
     if (typeof window !== 'undefined') {
@@ -37,30 +34,22 @@ export default function Home() {
   }
 
   useEffect(() => {
-    loadEvents()
-  }, [])
+    loadEvents(showPastEvents)
+    loadApiCredits()
+  }, [showPastEvents])
 
   useEffect(() => {
     let filtered = events
 
-    // Filter by category
+    // Filter by category only - date filtering is now done server-side
     if (selectedCategory) {
       filtered = filtered.filter(e => e.category === selectedCategory)
     }
 
-    // Filter by date (show only today onwards unless showPastEvents is true)
-    if (!showPastEvents) {
-      filtered = filtered.filter(e => {
-        const eventDate = new Date(e.event_date)
-        eventDate.setHours(0, 0, 0, 0)
-        return eventDate >= today
-      })
-    }
-
     setFilteredEvents(filtered)
-  }, [selectedCategory, showPastEvents, events])
+  }, [selectedCategory, events])
 
-  const loadEvents = async () => {
+  const loadEvents = async (includePastEvents: boolean = false) => {
     try {
       setLoading(true)
       setError(null)
@@ -72,10 +61,23 @@ export default function Home() {
       }
       addDebug('Supabase client initialized')
       
-      addDebug('Making query to Supabase...')
-      const { data, error: fetchError } = await supabase
+      // Get today's date in YYYY-MM-DD format for server-side filtering
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0] // e.g., "2025-12-03"
+      
+      addDebug(`Making query to Supabase (today: ${todayStr}, includePast: ${includePastEvents})...`)
+      
+      // Build query with optional date filter
+      let query = supabase
         .from('events')
         .select('*')
+      
+      // Only filter by date if NOT showing past events (server-side filtering)
+      if (!includePastEvents) {
+        query = query.gte('event_date', todayStr)
+      }
+      
+      const { data, error: fetchError } = await query
         .order('event_date', { ascending: true })
         .limit(200)
 
@@ -105,6 +107,19 @@ export default function Home() {
     } finally {
       setLoading(false)
       addDebug('Loading complete')
+    }
+  }
+
+  const loadApiCredits = async () => {
+    try {
+      const response = await fetch('/api/credits')
+      if (response.ok) {
+        const data = await response.json()
+        setApiCredits(data)
+      }
+    } catch (err) {
+      console.error('Failed to load API credits:', err)
+      // Don't show error to user, just log it
     }
   }
 
@@ -165,6 +180,7 @@ export default function Home() {
           const pollInterval = setInterval(() => {
             pollCount++
             loadEvents()
+            loadApiCredits() // Refresh credits after each poll
             
             if (pollCount >= maxPolls) {
               clearInterval(pollInterval)
@@ -198,15 +214,24 @@ export default function Home() {
   }
 
   const categories = ['Legislation', 'Housing', 'Recovery', 'General'] as const
-  const stats = {
-    total: events.length,
-    upcoming: events.filter(e => {
-      const eventDate = new Date(e.event_date)
-      eventDate.setHours(0, 0, 0, 0)
-      return eventDate >= today
-    }).length,
-    online: events.filter(e => e.is_online).length,
+  
+  // Calculate stats with current date
+  const getStats = () => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    return {
+      total: events.length,
+      upcoming: events.filter(e => {
+        const eventDate = new Date(e.event_date + 'T00:00:00')
+        eventDate.setHours(0, 0, 0, 0)
+        return eventDate >= today
+      }).length,
+      online: events.filter(e => e.is_online).length,
+    }
   }
+  
+  const stats = getStats()
 
   const getBadgeClass = (category: string) => {
     return `badge badge-${category.toLowerCase()}`
@@ -271,6 +296,25 @@ export default function Home() {
             <h3>Online Events</h3>
             <p>{stats.online}</p>
           </div>
+          {apiCredits.tavily && (
+            <div className="stat-card" style={{ 
+              backgroundColor: apiCredits.tavily.remaining < 200 ? '#fff3cd' : '#e3f2fd',
+              border: `1px solid ${apiCredits.tavily.remaining < 200 ? '#ffc107' : '#90caf9'}`
+            }}>
+              <h3>API Credits</h3>
+              <p style={{ fontSize: '0.9em', margin: 0 }}>
+                Tavily: {apiCredits.tavily.remaining}/{apiCredits.tavily.freeTierLimit || 1000}
+                {apiCredits.tavily.remaining < 200 && (
+                  <span style={{ color: '#d32f2f', fontWeight: 'bold', marginLeft: '8px' }}>⚠️ Low</span>
+                )}
+              </p>
+              {apiCredits.tavily.estimatedPerRun && (
+                <p style={{ fontSize: '0.75em', color: '#666', margin: '4px 0 0 0' }}>
+                  ~{apiCredits.tavily.estimatedPerRun} per run
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>

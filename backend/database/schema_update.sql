@@ -17,3 +17,6 @@ COMMENT ON COLUMN events.registration_url IS 'Direct link to event registration 
 COMMENT ON COLUMN events.url IS 'Source URL where event information was found';
 COMMENT ON COLUMN events.summary IS '1-2 sentence description of the event';
 
+
+
+

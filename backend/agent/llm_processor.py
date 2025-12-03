@@ -613,6 +613,25 @@ Extract all valid professional events (not news articles) and return as JSON arr
             print(f"  ⚠️  Rejecting likely fabricated title: {event.event_title[:50]}")
             return False
         
+        # STRICT: Reject events with past year in title (e.g., "Conference 2024" when we're in Dec 2025)
+        import re
+        from datetime import datetime
+        current_year = datetime.now().year
+        # Find years in title like "2024", "2023", etc.
+        years_in_title = re.findall(r'\b(20\d{2})\b', event.event_title)
+        for year_str in years_in_title:
+            year = int(year_str)
+            if year < current_year:
+                print(f"  ⚠️  Rejecting past year in title ({year}): {event.event_title[:50]}")
+                return False
+            # Also reject if current year but event date suggests it's next year
+            # (e.g., "Conference 2025" but date shows 2026)
+            if event.event_date:
+                event_year = event.event_date.year
+                if year < event_year - 1:  # Title year is much older
+                    print(f"  ⚠️  Rejecting mismatched year in title ({year} vs {event_year}): {event.event_title[:50]}")
+                    return False
+        
         # STRICT: Reject local events except from allowed cities
         # Allowed cities (UN-Habitat recovery focus areas)
         allowed_cities = [

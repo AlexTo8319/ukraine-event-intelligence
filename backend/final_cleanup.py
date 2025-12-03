@@ -168,6 +168,20 @@ def is_local_event(title: str, organizer: str) -> bool:
     return is_local and not is_allowed and not is_national
 
 
+def has_past_year_in_title(title: str) -> bool:
+    """Check if title contains a past year (indicates past event)."""
+    from datetime import datetime
+    current_year = datetime.now().year
+    
+    # Find years in title like "2024", "2023", etc.
+    years_in_title = re.findall(r'\b(20\d{2})\b', title)
+    for year_str in years_in_title:
+        year = int(year_str)
+        if year < current_year:
+            return True
+    return False
+
+
 def is_semantic_duplicate(title1: str, title2: str, date1: str, date2: str) -> bool:
     """Check if two events are semantic duplicates (same event in different languages)."""
     # Must be same date
@@ -215,24 +229,27 @@ def main():
     events = response.json()
     print(f"Total events: {len(events)}")
     
-    # STEP 1: Remove spam URLs, news articles, listing pages, and local events
-    print("\nStep 1: Removing spam/news/listing/local URLs...")
+    # STEP 1: Remove spam URLs, news articles, listing pages, local events, and past year events
+    print("\nStep 1: Removing problematic events...")
     removed = 0
     for e in events[:]:  # Copy list for safe removal
         url = e['url']
+        title = e['event_title']
         reason = None
         
         if is_spam_url(url):
-            reason = "spam"
+            reason = "spam URL"
         elif is_news_article(url):
-            reason = "news article"
+            reason = "news article URL"
         elif is_listing_page(url):
-            reason = "listing page"
-        elif is_local_event(e['event_title'], e.get('organizer', '')):
+            reason = "listing page URL"
+        elif is_local_event(title, e.get('organizer', '')):
             reason = "local event (not from allowed cities)"
+        elif has_past_year_in_title(title):
+            reason = "past year in title (past event)"
         
         if reason:
-            print(f"  🗑️ Removing ({reason}): {e['event_title'][:40]}...")
+            print(f"  🗑️ Removing ({reason}): {title[:40]}...")
             requests.delete(f"{SUPABASE_URL}/rest/v1/events?id=eq.{e['id']}", headers=HEADERS)
             events.remove(e)
             removed += 1

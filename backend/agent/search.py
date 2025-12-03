@@ -23,59 +23,50 @@ class SearchAgent:
         Returns:
             List of search query strings
         """
-        # Timeframe: next 4 weeks
+        # Timeframe: next 6 months
         queries = []
         
-        # Group A: Planning
+        # Group A: Planning - focus on specific organizations and real event sources
         planning_keywords = [
-            "урбаністика Україна події",
-            "урбан-планування Україна конференція",
-            "просторове планування Україна",
-            "містобудування Україна події",
-            "public space Ukraine events",
-            "green infrastructure Ukraine conference",
-            "urban planning Ukraine events 2024"
+            "urban planning Ukraine conference 2025 site:ua",
+            "урбаністика Україна конференція 2025",
+            "ro3kvit urban planning events Ukraine",
+            "cities alliance Ukraine urban recovery"
         ]
         
-        # Group B: Recovery
+        # Group B: Recovery - focus on official sources
         recovery_keywords = [
-            "відбудова України події",
-            "відновлення громад Україна",
-            "стійке відновлення Україна",
-            "resilient cities Ukraine events",
-            "sustainable urban development Ukraine",
-            "post-war recovery Ukraine events",
-            "Ukraine reconstruction events 2024"
+            "Ukraine reconstruction conference 2025 site:gov.ua",
+            "відбудова України конференція грудень 2025",
+            "Ukraine recovery forum EU 2025",
+            "rebuild Ukraine conference registration"
         ]
         
-        # Group C: Housing
+        # Group C: Housing - focus on policy events
         housing_keywords = [
-            "житлова політика Україна події",
-            "доступне житло Україна",
-            "housing policy Ukraine events",
-            "архітектура Україна конференція",
-            "енергоефективність Україна події",
-            "affordable housing Ukraine events"
+            "housing policy Ukraine forum 2025",
+            "affordable housing conference Ukraine site:eu",
+            "житлова політика форум Україна 2025"
         ]
         
-        # Group D: Governance
+        # Group D: Governance and capacity building
         governance_keywords = [
-            "розвиток спроможності Україна",
-            "capacity building Ukraine events",
-            "децентралізація Україна події",
-            "місцеве самоврядування Україна",
-            "municipal governance Ukraine",
-            "digital governance Ukraine events"
+            "decentralization Ukraine conference 2025",
+            "municipal governance forum Ukraine",
+            "місцеве самоврядування форум Україна 2025"
+        ]
+        
+        # Group E: Specific organizations known for real events
+        org_keywords = [
+            "UNDP Ukraine urban events 2025",
+            "World Bank Ukraine reconstruction conference",
+            "European Commission Ukraine recovery event"
         ]
         
         # Combine all keywords
-        all_keywords = planning_keywords + recovery_keywords + housing_keywords + governance_keywords
+        all_keywords = planning_keywords + recovery_keywords + housing_keywords + governance_keywords + org_keywords
         
-        # Add timeframe context to each query
-        queries = [f"{keyword} наступні 4 тижні" if any(c in keyword for c in "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя") 
-                  else f"{keyword} next 4 weeks" for keyword in all_keywords]
-        
-        return queries
+        return all_keywords
     
     def search(self, query: str, max_results: int = 10) -> List[Dict]:
         """
@@ -91,7 +82,7 @@ class SearchAgent:
         try:
             response = self.client.search(
                 query=query,
-                search_depth="advanced",
+                search_depth="advanced",  # Using advanced for better results and URL extraction
                 max_results=max_results,
                 include_answer=False,
                 include_raw_content=True

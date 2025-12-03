@@ -111,6 +111,19 @@ def _is_local_event(title: str, organizer: str) -> bool:
     # Reject if local and not allowed and not national
     return is_local and not is_allowed and not is_national
 
+def _has_past_year_in_title(title: str) -> bool:
+    """Check if title contains a past year (indicates past event)."""
+    from datetime import datetime
+    current_year = datetime.now().year
+    
+    # Find years in title like "2024", "2023", etc.
+    years_in_title = re.findall(r'\b(20\d{2})\b', title)
+    for year_str in years_in_title:
+        year = int(year_str)
+        if year < current_year:
+            return True
+    return False
+
 def _is_valid_url(url: str) -> tuple:
     """
     Check if URL is valid for an event page.
@@ -201,6 +214,11 @@ class DatabaseClient:
         organizer = event_data.get('organizer', '')
         if _is_local_event(title, organizer):
             print(f"  ❌ DB Rejected local event: {title[:40]}...")
+            return None
+        
+        # MANDATORY: Check for past year in title (indicates past event)
+        if _has_past_year_in_title(title):
+            print(f"  ❌ DB Rejected past year in title: {title[:40]}...")
             return None
         
         # MANDATORY: Translate before saving
